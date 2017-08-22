@@ -1,0 +1,27 @@
+{
+  "name": "devicehive-mqtt-incubator",
+  "version": "0.0.1",
+  "description": "mqtt broker connected with the DeviceHive",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "standard"
+  },
+  "pre-commit": [
+    "lint"
+  ],
+  "keywords": [
+    "mqtt",
+    "devicehive"
+  ],
+  "author": "iilunin",
+  "license": "ISC",
+  "dependencies": {
+    "aedes": "^0.30.0",
+    "pino": "^4.7.1",
+    "websocket-stream": "^5.0.1"
+  },
+  "devDependencies": {
+    "standard": "^10.0.3"
+  }
+}
