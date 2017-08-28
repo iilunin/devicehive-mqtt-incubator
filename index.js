@@ -9,6 +9,7 @@ const pino = require('pino')({level: process.env.LOG_LEVEL || 'info'})
 
 const wsPort = 8080, tcpPort = 1883
 let ws, tcpServer
+const badUsername = 'nouser', badTopic = 'noaccess'
 
 /**
  * Creates websocket MQTT broker
@@ -39,12 +40,12 @@ function launchMqtt () {
 }
 
 function publish () {
-  var packet = {
+  let packet = {
     cmd: `publish`,
     qos: 2,
     topic: `testtopic/1`,
     payload: Buffer.from(`Test message: ${Math.random()}`),
-    retain: true,
+    retain: false,
     c: true
   }
   aedes.publish(packet)
@@ -58,8 +59,23 @@ function publish () {
  * @param callback (error, authenticated)
  */
 aedes.authenticate = function(client, username, password, callback){
-  pino.info(`aedes.authenticate; '${arguments}'`)
+  pino.info(`aedes.authenticate; '${client}'`)
+  if (username === badUsername) {
+    callback(null, false)
+    return
+  }
+
   callback(null, true)
+  if (!client.clean) {
+    // TODO: load all subscriptions from the database to this client
+  }
+  if (client.will) {
+    // TODO: if client has last will
+    // client.will.qos
+    // client.will.retain
+    // client.will.topic
+    // client.will.payload
+  }
 }
 
 /**
@@ -72,18 +88,24 @@ aedes.authenticate = function(client, username, password, callback){
  * then message is sent to the broker's topic
  */
 aedes.authorizePublish = function (client, packet, callback) {
+
   pino.info(`aedes.authorizePublish; ${client.id}: ${getPacketData(packet)}`)
 
-  // Don't allow publishing messages from clients
-  // TODO: Here we should integrated with DH WS
-  // callback(null)
+  if (packet.topic.startsWith(badTopic)) {
+    client.close()
+    return
+  }
 
-  // We will need to deal with retain packages it can be done
+
+  // If callback comment, it doesn't publish messages from the clients
+  // TODO: Here we should integrated with DH WS
+  callback(null)
+
+  // TODO: We will need to deal with retain packages it can be done
   // using MQTT persistence layer or using DH persistence
   if (packet.retain) {
     aedes.persistence.storeRetained(packet, function cb(p) {})
   }
-
 }
 
 /**
@@ -96,6 +118,12 @@ aedes.authorizePublish = function (client, packet, callback) {
  */
 aedes.authorizeSubscribe = function (client, sub, callback) {
   pino.info(`aedes.authorizeSubscribe; ${client.id}: '${JSON.stringify(sub)}'`)
+
+  if (sub.topic.startsWith(badTopic)) {
+    client.close()
+    return
+  }
+
   callback(null, sub)
 }
 
@@ -135,7 +163,7 @@ aedes.on('publish', function (packet, client) {
 aedes.on('client', function (client) {
   pino.info(`new client '${client.id}' connected`)
 
-  setInterval(publish.bind(this), 5000)
+  // setInterval(publish.bind(this), 5000)
 })
 
 aedes.on('clientDisconnect', function (client) {
